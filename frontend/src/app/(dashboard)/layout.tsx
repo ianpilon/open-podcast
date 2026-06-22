@@ -1,7 +1,6 @@
 'use client'
 
 import { useAuth } from '@/lib/hooks/use-auth'
-import { useVersionCheck } from '@/lib/hooks/use-version-check'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
@@ -18,9 +17,6 @@ export default function DashboardLayout({
   const { isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false)
-
-  // Check for version updates once per session
-  useVersionCheck()
 
   useEffect(() => {
     // Mark that we've completed the initial auth check
