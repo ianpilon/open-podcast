@@ -42,6 +42,26 @@ export async function POST(request: Request) {
   return Response.json(await upstream.json(), { status: upstream.status })
 }
 
+export async function PATCH(request: Request) {
+  const id = new URL(request.url).searchParams.get('id') ?? ''
+  if (!/^[a-z0-9_]+$/.test(id)) {
+    return new Response('invalid voice id', { status: 400 })
+  }
+  const body = await request.json().catch(() => null)
+  if (!body) {
+    return new Response('JSON body required', { status: 400 })
+  }
+  const upstream = await fetch(`${GATEWAY_URL}/clone/voices/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).catch(() => null)
+  if (!upstream) {
+    return new Response('voice gateway unavailable', { status: 502 })
+  }
+  return Response.json(await upstream.json(), { status: upstream.status })
+}
+
 export async function DELETE(request: Request) {
   const id = new URL(request.url).searchParams.get('id') ?? ''
   if (!/^[a-z0-9_]+$/.test(id)) {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Search, Play, Pause, Loader2, AlertCircle } from 'lucide-react'
+import { Search, Play, Pause, Loader2, AlertCircle, Pencil, Check, X } from 'lucide-react'
 
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/lib/hooks/use-toast'
@@ -61,6 +61,13 @@ export function VoiceLibrary() {
   const [playing, setPlaying] = useState<string | null>(null)
   const [synthing, setSynthing] = useState<string | null>(null)
 
+  // Inline metadata editing for cloned voices (name / accent / gender).
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editAccent, setEditAccent] = useState('')
+  const [editGender, setEditGender] = useState('')
+  const [saving, setSaving] = useState(false)
+
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const cache = useRef<Map<string, string>>(new Map())
 
@@ -100,12 +107,13 @@ export function VoiceLibrary() {
         try {
           const cloneRes = await fetch('/api/voice-clone')
           if (cloneRes.ok) {
-            const entries: Array<{ id: string; name: string }> = await cloneRes.json()
+            const entries: Array<{ id: string; name: string; accent?: string; gender?: string }> =
+              await cloneRes.json()
             cloned = entries.map((entry) => ({
               id: entry.id,
               name: entry.name,
-              gender: '',
-              accent: 'Cloned',
+              gender: entry.gender || '',
+              accent: entry.accent || 'Cloned',
               flag: '🎤',
               legacy: false,
               cloned: true,
@@ -208,6 +216,39 @@ export function VoiceLibrary() {
     [toast]
   )
 
+  const startEdit = useCallback((voice: Voice) => {
+    setEditingId(voice.id)
+    setEditName(voice.name)
+    setEditAccent(voice.accent === 'Cloned' ? '' : voice.accent)
+    setEditGender(voice.gender)
+  }, [])
+
+  const saveEdit = useCallback(async () => {
+    if (!editingId || !editName.trim()) return
+    setSaving(true)
+    try {
+      const response = await fetch(`/api/voice-clone?id=${editingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editName.trim(), accent: editAccent.trim(), gender: editGender }),
+      })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const meta = await response.json()
+      setVoices((current) =>
+        current.map((v) =>
+          v.id === editingId
+            ? { ...v, name: meta.name, accent: meta.accent || 'Cloned', gender: meta.gender || '' }
+            : v
+        )
+      )
+      setEditingId(null)
+    } catch {
+      toast({ title: 'Could not save voice details', variant: 'destructive' })
+    } finally {
+      setSaving(false)
+    }
+  }, [editingId, editName, editAccent, editGender, toast])
+
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -275,30 +316,94 @@ export function VoiceLibrary() {
                   {v.flag}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-semibold">{v.name}</div>
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                    <button
-                      onClick={() => copyId(v.id)}
-                      title="Click to copy"
-                      className="rounded border bg-background px-1.5 py-0.5 font-mono text-[11px] text-foreground/80 hover:text-foreground"
-                    >
-                      {v.id}
-                    </button>
-                    {v.gender && (
-                      <span className="rounded border bg-background px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                        {v.gender}
-                      </span>
-                    )}
-                    <span className="rounded border bg-background px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                      {v.accent}
-                    </span>
-                    {v.legacy && (
-                      <span className="rounded border border-amber-800/40 bg-amber-950/30 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-amber-500/80">
-                        legacy
-                      </span>
-                    )}
-                  </div>
+                  {editingId === v.id ? (
+                    <div className="space-y-1.5">
+                      <Input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        placeholder="Name"
+                        className="h-7 text-xs"
+                      />
+                      <div className="flex gap-1.5">
+                        <Input
+                          value={editAccent}
+                          onChange={(e) => setEditAccent(e.target.value)}
+                          placeholder="Accent (e.g. Canadian)"
+                          className="h-7 text-xs"
+                        />
+                        <select
+                          value={editGender}
+                          onChange={(e) => setEditGender(e.target.value)}
+                          className="h-7 rounded-lg border bg-background px-2 text-xs"
+                        >
+                          <option value="">Gender</option>
+                          <option>Female</option>
+                          <option>Male</option>
+                        </select>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="truncate text-sm font-semibold">{v.name}</div>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        <button
+                          onClick={() => copyId(v.id)}
+                          title="Click to copy"
+                          className="rounded border bg-background px-1.5 py-0.5 font-mono text-[11px] text-foreground/80 hover:text-foreground"
+                        >
+                          {v.id}
+                        </button>
+                        {v.gender && (
+                          <span className="rounded border bg-background px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                            {v.gender}
+                          </span>
+                        )}
+                        <span className="rounded border bg-background px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                          {v.accent}
+                        </span>
+                        {v.cloned && (
+                          <span className="rounded border border-emerald-800/40 bg-emerald-950/30 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-emerald-500/80">
+                            cloned
+                          </span>
+                        )}
+                        {v.legacy && (
+                          <span className="rounded border border-amber-800/40 bg-amber-950/30 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-amber-500/80">
+                            legacy
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
+                {v.cloned && (
+                  editingId === v.id ? (
+                    <div className="flex shrink-0 gap-1">
+                      <button
+                        onClick={() => void saveEdit()}
+                        disabled={saving || !editName.trim()}
+                        aria-label="Save voice details"
+                        className="flex h-8 w-8 items-center justify-center rounded-full border bg-background hover:border-primary hover:text-primary"
+                      >
+                        {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-4 w-4" />}
+                      </button>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        aria-label="Cancel editing"
+                        className="flex h-8 w-8 items-center justify-center rounded-full border bg-background hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => startEdit(v)}
+                      aria-label={`Edit ${v.name}`}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-background text-muted-foreground hover:border-primary hover:text-primary"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  )
+                )}
                 <button
                   onClick={() => togglePlay(v.id)}
                   aria-label={isPlaying ? `Pause ${v.id}` : `Play ${v.id}`}

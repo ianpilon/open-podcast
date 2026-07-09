@@ -68,17 +68,24 @@ type VoiceFilter = 'all' | 'female' | 'male' | 'US' | 'UK'
 
 // User-cloned voices served by the local voice gateway (F5-TTS). They have no
 // pre-rendered samples, so previews synthesize live via /api/voice-preview.
-interface CustomVoice {
+export interface CustomVoice {
   id: string
   name: string
+  accent?: string
+  gender?: string
 }
 
-const CUSTOM_PREVIEW_LINES: Record<VoiceSampleKind, string> = {
+export function customVoiceTag(voice: CustomVoice, fallback: string): string {
+  const parts = [voice.accent, voice.gender].filter(Boolean)
+  return parts.length > 0 ? parts.join(' · ') : fallback
+}
+
+export const CUSTOM_PREVIEW_LINES: Record<VoiceSampleKind, string> = {
   podcast: 'Welcome back to the show. Today we are getting into something I think you will want to hear.',
   briefing: "I went through your notes. Here's what stands out, and what I think it means.",
 }
 
-function useCustomVoices() {
+export function useCustomVoices() {
   const [voices, setVoices] = useState<CustomVoice[]>([])
   const refresh = useCallback(async () => {
     try {
@@ -267,7 +274,9 @@ export function VoiceGrid({ value, onSelect, sampleKind = 'podcast' }: VoiceGrid
                       <p className="truncate text-sm font-medium">{voice.name}</p>
                       {playing && <Equalizer />}
                     </div>
-                    <p className="text-xs text-muted-foreground">{t('podcasts.voiceCloned')}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {customVoiceTag(voice, t('podcasts.voiceCloned'))}
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -494,6 +503,7 @@ export function VoiceStrip({ speakerProfileName, previewText, sampleKind = 'podc
   const { t } = useTranslation()
   const { toast } = useToast()
   const { speakerProfiles } = useSpeakerProfiles()
+  const { voices: customVoices } = useCustomVoices()
   const updateProfile = useUpdateSpeakerProfile()
   const [playingKey, setPlayingKey] = useState<string | null>(null)
   const [loadingKey, setLoadingKey] = useState<string | null>(null)
@@ -505,7 +515,7 @@ export function VoiceStrip({ speakerProfileName, previewText, sampleKind = 'podc
     [speakerProfiles, speakerProfileName]
   )
 
-  const playSample = useCallback((key: string, voiceId: string) => {
+  const playSample = useCallback(async (key: string, voiceId: string) => {
     if (playingKey === key) {
       stopVoicePlayback()
       setPlayingKey(null)
@@ -513,12 +523,36 @@ export function VoiceStrip({ speakerProfileName, previewText, sampleKind = 'podc
     }
     // Resolve aliases ("nova" → af_nova) so the sample URL matches a real file.
     const voice = voiceById(voiceId)
-    if (!voice) return
-    setPlayingKey(key)
-    playExclusive(voiceSampleUrl(voice.id, sampleKind), () => {
-      setPlayingKey((current) => (current === key ? null : current))
-    })
-  }, [playingKey, sampleKind])
+    if (voice) {
+      setPlayingKey(key)
+      playExclusive(voiceSampleUrl(voice.id, sampleKind), () => {
+        setPlayingKey((current) => (current === key ? null : current))
+      })
+      return
+    }
+    // Cloned voices have no pre-rendered sample; synthesize the line live.
+    if (loadingKey) return
+    setLoadingKey(key)
+    try {
+      const response = await fetch('/api/voice-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voice: voiceId, text: CUSTOM_PREVIEW_LINES[sampleKind] }),
+      })
+      if (!response.ok) throw new Error(`TTS returned ${response.status}`)
+      const url = URL.createObjectURL(await response.blob())
+      setPlayingKey(key)
+      playExclusive(url, () => {
+        URL.revokeObjectURL(url)
+        setPlayingKey((current) => (current === key ? null : current))
+      })
+    } catch (error) {
+      console.error('Cloned voice sample failed', error)
+      toast({ title: t('podcasts.voicePreviewFailed'), variant: 'destructive' })
+    } finally {
+      setLoadingKey(null)
+    }
+  }, [playingKey, loadingKey, sampleKind, toast, t])
 
   const playContentPreview = useCallback(async (key: string, voiceId: string) => {
     if (!previewText?.trim() || loadingKey) return
@@ -579,6 +613,7 @@ export function VoiceStrip({ speakerProfileName, previewText, sampleKind = 'podc
       <div className="space-y-2">
         {profile.speakers.map((speaker, index) => {
           const voice = voiceById(speaker.voice_id)
+          const customVoice = customVoices.find((v) => v.id === speaker.voice_id)
           const sampleKey = `sample-${index}`
           const contentKey = `content-${index}`
           const initials = speaker.name
@@ -605,19 +640,25 @@ export function VoiceStrip({ speakerProfileName, previewText, sampleKind = 'podc
                   {playingKey === sampleKey || playingKey === contentKey ? <Equalizer /> : null}
                 </div>
                 <p className="truncate text-xs text-muted-foreground">
-                  {voice ? `${voice.name} — ${voiceTagLabel(voice, t)}` : speaker.voice_id}
+                  {voice
+                    ? `${voice.name} — ${voiceTagLabel(voice, t)}`
+                    : customVoice
+                      ? `${customVoice.name} — ${customVoiceTag(customVoice, t('podcasts.voiceCloned'))}`
+                      : speaker.voice_id}
                 </p>
               </div>
-              {voice && (
+              {(voice || customVoice) && (
                 <button
                   type="button"
-                  onClick={() => playSample(sampleKey, speaker.voice_id)}
-                  aria-label={playingKey === sampleKey ? t('podcasts.voiceStopSample') : `${t('podcasts.voicePlaySample')}: ${voice.name}`}
+                  onClick={() => void playSample(sampleKey, speaker.voice_id)}
+                  aria-label={playingKey === sampleKey ? t('podcasts.voiceStopSample') : `${t('podcasts.voicePlaySample')}: ${(voice ?? customVoice)!.name}`}
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-background hover:bg-accent"
                 >
-                  {playingKey === sampleKey
-                    ? <Square className="h-3 w-3 fill-current" />
-                    : <Play className="ml-0.5 h-3.5 w-3.5" />}
+                  {loadingKey === sampleKey
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : playingKey === sampleKey
+                      ? <Square className="h-3 w-3 fill-current" />
+                      : <Play className="ml-0.5 h-3.5 w-3.5" />}
                 </button>
               )}
               {previewText?.trim() ? (
