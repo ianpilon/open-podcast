@@ -28,6 +28,9 @@ interface Voice {
   accent: string
   flag: string
   legacy: boolean
+  // User-cloned voices come from the local voice gateway, not Kokoro, and
+  // must be previewed through /api/voice-preview (same origin).
+  cloned?: boolean
 }
 
 function parseVoice(id: string): Voice {
@@ -91,7 +94,28 @@ export function VoiceLibrary() {
             (ORDER[a.id.slice(0, 2)] ?? 99) - (ORDER[b.id.slice(0, 2)] ?? 99) ||
             a.id.localeCompare(b.id)
         )
-        if (!cancelled) setVoices(parsed)
+
+        // Cloned voices from the local voice gateway, listed first.
+        let cloned: Voice[] = []
+        try {
+          const cloneRes = await fetch('/api/voice-clone')
+          if (cloneRes.ok) {
+            const entries: Array<{ id: string; name: string }> = await cloneRes.json()
+            cloned = entries.map((entry) => ({
+              id: entry.id,
+              name: entry.name,
+              gender: '',
+              accent: 'Cloned',
+              flag: '🎤',
+              legacy: false,
+              cloned: true,
+            }))
+          }
+        } catch {
+          // Gateway not running: just show the Kokoro voices.
+        }
+
+        if (!cancelled) setVoices([...cloned, ...parsed])
       } catch {
         if (!cancelled) setListError(true)
       } finally {
@@ -134,16 +158,25 @@ export function VoiceLibrary() {
       if (!url) {
         setSynthing(id)
         try {
-          const res = await fetch(`${KOKORO_URL}/v1/audio/speech`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              model: 'kokoro',
-              input: SAMPLE_TEXT,
-              voice: id,
-              response_format: 'mp3',
-            }),
-          })
+          const voice = voices.find((v) => v.id === id)
+          // Cloned voices are served by the local gateway via the same-origin
+          // preview route; Kokoro voices keep the direct (CORS-enabled) call.
+          const res = voice?.cloned
+            ? await fetch('/api/voice-preview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ voice: id, text: SAMPLE_TEXT }),
+              })
+            : await fetch(`${KOKORO_URL}/v1/audio/speech`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  model: 'kokoro',
+                  input: SAMPLE_TEXT,
+                  voice: id,
+                  response_format: 'mp3',
+                }),
+              })
           if (!res.ok) throw new Error(`HTTP ${res.status}`)
           url = URL.createObjectURL(await res.blob())
           cache.current.set(id, url)
@@ -163,7 +196,7 @@ export function VoiceLibrary() {
       void audio.play()
       setPlaying(id)
     },
-    [playing, toast]
+    [playing, voices, toast]
   )
 
   const copyId = useCallback(
