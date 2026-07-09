@@ -23,6 +23,25 @@ export async function extractPdfText(
   file: File,
   onProgress?: (pct: number) => void
 ): Promise<string> {
+  // WebKit (the Mac app's engine) has no ReadableStream async iteration, which
+  // pdf.js getTextContent relies on ("undefined is not a function (near '...t of e...')").
+  if (typeof ReadableStream !== 'undefined' && !(Symbol.asyncIterator in ReadableStream.prototype)) {
+    ;(ReadableStream.prototype as unknown as Record<symbol, unknown>)[Symbol.asyncIterator] =
+      function (this: ReadableStream) {
+        const reader = this.getReader()
+        return {
+          next: () => reader.read(),
+          return: async (value: unknown) => {
+            await reader.cancel()
+            return { done: true, value }
+          },
+          [Symbol.asyncIterator]() {
+            return this
+          },
+        }
+      }
+  }
+
   // Lazy-import so pdf.js never runs during server-side rendering.
   const pdfjs = await import('pdfjs-dist')
   pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
