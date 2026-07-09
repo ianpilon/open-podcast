@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 
 import {
   useDeletePodcastEpisode,
@@ -24,6 +25,20 @@ export function ProcessingEpisodes() {
     () => [...statusGroups.running, ...statusGroups.pending],
     [statusGroups.running, statusGroups.pending]
   )
+
+  // When an episode this panel was tracking finishes, take the user to
+  // Completed Episodes so the result is one click from playing. Failures and
+  // deletions don't navigate (they never reach the completed group).
+  const router = useRouter()
+  const trackedIds = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    const completedIds = new Set(statusGroups.completed.map((episode) => episode.id))
+    const justFinished = [...trackedIds.current].some((id) => completedIds.has(id))
+    trackedIds.current = new Set(processing.map((episode) => episode.id))
+    if (justFinished) {
+      router.push('/podcasts/history')
+    }
+  }, [processing, statusGroups.completed, router])
 
   const handleDelete = useCallback(
     (episodeId: string) => deleteEpisode.mutateAsync(episodeId),

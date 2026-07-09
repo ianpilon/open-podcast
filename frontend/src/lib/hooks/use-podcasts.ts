@@ -45,6 +45,10 @@ export function usePodcastEpisodes(options?: { autoRefresh?: boolean; pollInterv
   const query = useQuery({
     queryKey: QUERY_KEYS.podcastEpisodes,
     queryFn: podcastsApi.listEpisodes,
+    // Generations run for many minutes and users switch away; keep polling in
+    // unfocused windows so the app is already current (and has navigated to
+    // Completed Episodes) when they come back.
+    refetchIntervalInBackground: true,
     refetchInterval: (current) => {
       // Steady poll: used on the Generate page so a newly-submitted episode
       // reliably appears in "Currently Processing" (the active-only poll below
