@@ -13,6 +13,7 @@ import { BuildContextRequest } from '@/lib/types/api'
 import { PodcastGenerationRequest } from '@/lib/types/podcasts'
 import { condenseContent, needsCondensing } from '@/lib/condense-content'
 import { extractVerbatimContent } from '@/lib/extract-content'
+import { VOICE_STYLE_RULES } from '@/lib/voice-style'
 import { useToast } from '@/lib/hooks/use-toast'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import {
@@ -279,12 +280,16 @@ export function GeneratePodcastForm({ active = true, onGenerated, onCancel, show
           }
         }
 
+        // The house style guide rides along on every generation so all
+        // formats share one voice standard (see lib/voice-style.ts).
         const payload: PodcastGenerationRequest = {
           episode_profile: selectedEpisodeProfile.name,
           speaker_profile: selectedEpisodeProfile.speaker_config,
           episode_name: episodeName.trim(),
           content,
-          briefing_suffix: instructions.trim() ? instructions.trim() : undefined,
+          briefing_suffix: [instructions.trim(), VOICE_STYLE_RULES]
+            .filter(Boolean)
+            .join('\n\n'),
         }
 
         await generatePodcast.mutateAsync(payload)
