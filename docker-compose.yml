@@ -1,6 +1,6 @@
 services:
   surrealdb:
-    image: surrealdb/surrealdb:v2
+    image: surrealdb/surrealdb:v2.6.5
     command: start --log info --user root --pass root rocksdb:/mydata/mydatabase.db
     user: root  # Required for bind mounts on Linux
     ports:
@@ -10,10 +10,10 @@ services:
     environment:
       - SURREAL_EXPERIMENTAL_GRAPHQL=true
     restart: always
-    pull_policy: always
+    pull_policy: missing
 
   open_notebook:
-    image: lfnovo/open_notebook:v1-latest
+    image: lfnovo/open_notebook:1.10.0
     ports:
       - "8502:8502"  # Web UI
       - "5055:5055"  # REST API
@@ -33,4 +33,4 @@ services:
     depends_on:
       - surrealdb
     restart: always
-    pull_policy: always
+    pull_policy: missing
