@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { getDateLocale } from '@/lib/utils/date-locale'
-import { InfoIcon, RefreshCcw, Trash2 } from 'lucide-react'
+import { Download, InfoIcon, RefreshCcw, Trash2 } from 'lucide-react'
 
 import { resolvePodcastAssetUrl } from '@/lib/api/podcasts'
 import { EpisodeStatus, FAILED_EPISODE_STATUSES, PodcastEpisode } from '@/lib/types/podcasts'
@@ -225,6 +225,22 @@ export function EpisodeCard({ episode, onDelete, deleting, onRetry, retrying }: 
     }
   }
 
+  // Saves the spoken transcript as a plain-text file named after the episode.
+  const handleDownloadTranscript = () => {
+    const text = transcriptEntries
+      .map((entry) => `${entry.speaker ?? t('podcasts.speaker')}: ${entry.dialogue ?? ''}`)
+      .join('\n\n')
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `${episode.name}.txt`
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 10000)
+  }
+
   const isFailed = FAILED_EPISODE_STATUSES.includes(episode.job_status as EpisodeStatus)
 
   return (
@@ -381,6 +397,11 @@ export function EpisodeCard({ episode, onDelete, deleting, onRetry, retrying }: 
                 </div>
               </DialogContent>
             </Dialog>
+            {transcriptEntries.length > 0 ? (
+              <Button variant="outline" size="sm" onClick={handleDownloadTranscript}>
+                <Download className="mr-2 h-4 w-4" /> {t('podcasts.transcriptTab')}
+              </Button>
+            ) : null}
             {isFailed && onRetry ? (
               <Button
                 variant="outline"
