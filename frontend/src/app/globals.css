@@ -189,4 +189,15 @@
   .clickable-card * {
     cursor: pointer !important;
   }
+
+  /* Equalizer bars shown while a voice sample is playing */
+  @keyframes voice-eq {
+    0%, 100% { transform: scaleY(0.3); }
+    50% { transform: scaleY(1); }
+  }
+
+  .voice-eq-bar {
+    animation: voice-eq 0.8s ease-in-out infinite;
+    transform-origin: bottom;
+  }
 }

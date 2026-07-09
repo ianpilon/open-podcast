@@ -25,6 +25,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { ModelSelector } from '@/components/common/ModelSelector'
+import { VoicePickerPopover } from '@/components/podcasts/VoicePicker'
 
 import type { TFunction } from 'i18next'
 import { useTranslation } from '@/lib/hooks/use-translation'
@@ -270,11 +271,15 @@ export function SpeakerProfileFormDialog({
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor={`speaker-voice-${index}`}>{t('podcasts.voiceId')} *</Label>
-                    <Input
-                      id={`speaker-voice-${index}`}
-                      {...register(`speakers.${index}.voice_id` as const)}
-                      placeholder="voice_123"
-                      autoComplete="off"
+                    <Controller
+                      control={control}
+                      name={`speakers.${index}.voice_id` as const}
+                      render={({ field: voiceField }) => (
+                        <VoicePickerPopover
+                          value={voiceField.value}
+                          onChange={voiceField.onChange}
+                        />
+                      )}
                     />
                     {errors.speakers?.[index]?.voice_id ? (
                       <p className="text-xs text-red-600">
