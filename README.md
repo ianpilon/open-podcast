@@ -30,6 +30,16 @@ Analysts that quote sources must quote them exactly, and local models paraphrase
 - Documents too large for the model's context window are shrunk differently per mode. Podcasts summarize (map-reduce). Briefings use **selection by number**: the source is split into numbered segments, the model replies only with segment numbers to keep, and the app slices those segments from the original text itself. The analyst's source material is verbatim by construction, regardless of model quality.
 - Every briefing prompt carries hard rules: quote only text that appears word for word in the content, and never repeat the same quote across sections.
 
+## House style: no AI filler
+
+Generated speech tends toward AI-typical filler ("delve", "game-changer", "revolutionary"), which makes audio sound canned. A single house style guide in `frontend/src/lib/voice-style.ts` rides along on every generation, and the backend folds it into the prompts that write both the outline and the script, so every format and analyst shares one voice standard:
+
+- A banned-phrase list (delve, deep dive, unpack, game-changer, groundbreaking, cutting-edge, unlock, leverage, seamless, "in today's fast-paced world", and the rest of the usual suspects).
+- No hype adjectives: nothing is "exciting" or "incredible"; the specifics carry the weight.
+- Plain, concrete speech: short sentences, concrete verbs, earned enthusiasm, dry wit over cheerleading.
+
+Edit that one file to change how every voice sounds. Per-speaker character (a skeptical analyst, a warm explainer) still lives in the speaker configuration's personality fields; the style guide is the floor underneath all of them.
+
 ## Picking voices
 
 - Every speaker row on the Generate page shows its voice with an instant play button (samples are pre-rendered per mode, so a briefing voice previews as an analyst, not a podcast host).
