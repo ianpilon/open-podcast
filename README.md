@@ -19,6 +19,7 @@ The Generate page asks one question first: what do you want to create? Each mode
 
 - **Discovery Debrief:** a skeptical customer-discovery analyst reads an interview transcript and reports honestly whether a business opportunity is visible in it. Hunts for the workaround that survives despite paid tools; refuses to inflate weak signals.
 - **Meeting Recap:** your meeting read back as your own first-person notes: headline, key points, decisions, action items with owners and dates, and open questions.
+- **Paper Explainer:** an expert explainer rebuilds an academic paper in plain language: the one-sentence core, why it matters, the ideas from scratch with analogies (mapping each technical term back to its plain meaning), how they did it, what they found, the catch, and the takeaway.
 
 To add a new briefing format: create a 1-speaker speaker configuration and an episode profile with your analyst prompt as the briefing, then register the profile name in `frontend/src/lib/podcast-modes.ts`.
 
