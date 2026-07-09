@@ -10,6 +10,9 @@ export interface KokoroVoice {
 }
 
 export const KOKORO_VOICES: KokoroVoice[] = [
+  // Ian's own voice, served by the F5-TTS clone gateway (not Kokoro); the
+  // gateway proxies every other id below to Kokoro so this list stays unified.
+  { id: 'ian', name: 'Ian', accent: 'US', gender: 'male' },
   { id: 'af_heart', name: 'Heart', accent: 'US', gender: 'female' },
   { id: 'af_bella', name: 'Bella', accent: 'US', gender: 'female' },
   { id: 'af_nova', name: 'Nova', accent: 'US', gender: 'female' },
