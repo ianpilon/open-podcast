@@ -393,10 +393,44 @@ export function useDuplicateSpeakerProfile() {
   })
 }
 
+// A generation job can die before it creates an episode row (e.g. profile
+// misconfiguration), which the episode list will never show. Watch the job
+// itself for a while after submission and surface a failure as a toast.
+const JOB_POLL_INTERVAL_MS = 3000
+const JOB_POLL_TIMEOUT_MS = 120000
+
 export function useGeneratePodcast() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
   const { t } = useTranslation()
+
+  const watchJob = async (jobId: string, episodeName: string) => {
+    const deadline = Date.now() + JOB_POLL_TIMEOUT_MS
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, JOB_POLL_INTERVAL_MS))
+      try {
+        const job = await podcastsApi.getJobStatus(jobId)
+        if (job.status === 'failed' || job.status === 'error') {
+          toast({
+            title: t('podcasts.generationFailed'),
+            description: job.error_message
+              ? `${episodeName}: ${job.error_message}`
+              : t('podcasts.tryAgainMoment'),
+            variant: 'destructive',
+            durationMs: 15000,
+          })
+          void queryClient.refetchQueries({ queryKey: QUERY_KEYS.podcastEpisodes })
+          return
+        }
+        if (job.status === 'completed' || job.status === 'success') {
+          void queryClient.refetchQueries({ queryKey: QUERY_KEYS.podcastEpisodes })
+          return
+        }
+      } catch {
+        // Transient status-endpoint hiccup; keep watching until the deadline.
+      }
+    }
+  }
 
   return useMutation({
     mutationFn: (payload: PodcastGenerationRequest) =>
@@ -408,6 +442,7 @@ export function useGeneratePodcast() {
         title: t('podcasts.generationStarted'),
         description: t('podcasts.generationStartedDesc').replace('{name}', response.episode_name),
       })
+      void watchJob(response.job_id, response.episode_name)
     },
     onError: (error: unknown) => {
       toast({

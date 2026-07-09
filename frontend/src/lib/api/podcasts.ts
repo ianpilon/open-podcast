@@ -7,6 +7,7 @@ import {
   Language,
   PodcastGenerationRequest,
   PodcastGenerationResponse,
+  PodcastJobStatus,
 } from '@/lib/types/podcasts'
 
 export type EpisodeProfileInput = Omit<EpisodeProfile, 'id'>
@@ -116,6 +117,11 @@ export const podcastsApi = {
       '/podcasts/generate',
       payload
     )
+    return response.data
+  },
+
+  getJobStatus: async (jobId: string) => {
+    const response = await apiClient.get<PodcastJobStatus>(`/podcasts/jobs/${jobId}`)
     return response.data
   },
 

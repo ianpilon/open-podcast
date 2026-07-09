@@ -81,6 +81,12 @@ export interface PodcastGenerationResponse {
   episode_name: string
 }
 
+export interface PodcastJobStatus {
+  job_id: string
+  status: string
+  error_message: string | null
+}
+
 export type EpisodeStatusGroup = 'running' | 'completed' | 'failed' | 'pending'
 
 export type EpisodeStatusGroups = Record<EpisodeStatusGroup, PodcastEpisode[]>
