@@ -44,9 +44,9 @@ export function LoginForm() {
       try {
         const required = await checkAuthRequired()
 
-        // If auth is not required, redirect to notebooks
+        // If auth is not required, redirect to the Generate Podcast page
         if (!required) {
-          router.push('/notebooks')
+          router.push('/podcasts')
         }
       } catch (error) {
         console.error('Error checking auth requirement:', error)
@@ -59,7 +59,7 @@ export function LoginForm() {
     // If we already know auth status, use it
     if (authRequired !== null) {
       if (!authRequired && isAuthenticated) {
-        router.push('/notebooks')
+        router.push('/podcasts')
       } else {
         setIsCheckingAuth(false)
       }

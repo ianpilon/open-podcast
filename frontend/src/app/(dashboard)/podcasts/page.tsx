@@ -44,11 +44,12 @@ export default function PodcastsPage() {
           ) : null}
 
           <div className="grid gap-6 md:grid-cols-[2fr_1fr]">
-            <FileUploadPanel />
+            <div className="space-y-6">
+              <FileUploadPanel />
+              <ProcessingEpisodes />
+            </div>
             <GeneratePodcastForm active />
           </div>
-
-          <ProcessingEpisodes />
         </div>
       </div>
     </AppShell>

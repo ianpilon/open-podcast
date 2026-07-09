@@ -4,9 +4,9 @@ import type { NextRequest } from 'next/server'
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Redirect root to notebooks
+  // Redirect root to the Generate Podcast page
   if (pathname === '/') {
-    return NextResponse.redirect(new URL('/notebooks', request.url))
+    return NextResponse.redirect(new URL('/podcasts', request.url))
   }
 
   return NextResponse.next()
