@@ -7,7 +7,7 @@ Open Podcast is a local-first audio generator. Drop in a document (PDF, text, ma
 
 It is a focused fork of [Open Notebook](https://github.com/lfnovo/open-notebook) (MIT), stripped down to do one thing well: turn documents into audio worth listening to.
 
-![Open Podcast](assets/screenshot.png)
+![Open Podcast](assets/screenshot-v2.png)
 
 ## Podcast or Briefing
 
