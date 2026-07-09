@@ -523,6 +523,8 @@ export const itIT = {
     modeBriefing: "Briefing",
     modeBriefingDesc: "Una voce legge e analizza i tuoi appunti",
     transcriptSaved: "Trascrizione salvata",
+    downloadAudio: "Audio",
+    audioSaved: "Audio salvato",
     episodeName: "Nome episodio",
     episodeNamePlaceholder: "es., IA e il futuro del Lavoro",
     additionalInstructions: "Istruzioni aggiuntive",

@@ -523,6 +523,8 @@ export const plPL = {
     modeBriefing: "Briefing",
     modeBriefingDesc: "Jeden głos czyta i analizuje Twoje notatki",
     transcriptSaved: "Transkrypcja zapisana",
+    downloadAudio: "Audio",
+    audioSaved: "Audio zapisane",
     episodeName: "Nazwa odcinka",
     episodeNamePlaceholder: "np. AI i przyszłość pracy",
     additionalInstructions: "Dodatkowe instrukcje",

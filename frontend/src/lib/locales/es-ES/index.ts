@@ -523,6 +523,8 @@ export const esES = {
     modeBriefing: "Informe",
     modeBriefingDesc: "Una voz lee y analiza tus notas",
     transcriptSaved: "Transcripción guardada",
+    downloadAudio: "Audio",
+    audioSaved: "Audio guardado",
     episodeName: "Nombre del episodio",
     episodeNamePlaceholder: "ej., IA y el futuro del trabajo",
     additionalInstructions: "Instrucciones adicionales",

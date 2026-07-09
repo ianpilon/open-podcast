@@ -523,6 +523,8 @@ export const trTR = {
     modeBriefing: "Brifing",
     modeBriefingDesc: "Tek bir ses notlarını okur ve analiz eder",
     transcriptSaved: "Transkript kaydedildi",
+    downloadAudio: "Ses",
+    audioSaved: "Ses kaydedildi",
     episodeName: "Bölüm adı",
     episodeNamePlaceholder: "örn. Yapay Zeka ve İşin Geleceği",
     additionalInstructions: "Ek talimatlar",

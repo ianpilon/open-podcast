@@ -523,6 +523,8 @@ export const zhTW = {
     modeBriefing: "簡報",
     modeBriefingDesc: "一個聲音朗讀並分析你的筆記",
     transcriptSaved: "文字稿已儲存",
+    downloadAudio: "音訊",
+    audioSaved: "音訊已儲存",
     episodeName: "單集名稱",
     episodeNamePlaceholder: "例如：AI 與工作的未來",
     additionalInstructions: "附加指令",

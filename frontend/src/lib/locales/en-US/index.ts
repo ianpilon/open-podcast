@@ -523,6 +523,8 @@ export const enUS = {
     modeBriefing: "Briefing",
     modeBriefingDesc: "One voice reads and analyzes your notes",
     transcriptSaved: "Transcript saved",
+    downloadAudio: "Audio",
+    audioSaved: "Audio saved",
     episodeName: "Episode name",
     episodeNamePlaceholder: "e.g., AI and the Future of Work",
     additionalInstructions: "Additional instructions",

@@ -227,6 +227,40 @@ export function EpisodeCard({ episode, onDelete, deleting, onRetry, retrying }: 
     }
   }
 
+  // Saves the episode audio as an mp3 named after the episode. The player's
+  // source is usually already a blob URL; direct URLs are fetched first
+  // because the download attribute is ignored on cross-origin links.
+  const handleDownloadAudio = async () => {
+    if (!audioSrc) return
+    let href = audioSrc
+    let created = false
+    try {
+      if (!audioSrc.startsWith('blob:')) {
+        const response = await fetch(audioSrc)
+        if (!response.ok) throw new Error(`Audio request failed with status ${response.status}`)
+        href = URL.createObjectURL(await response.blob())
+        created = true
+      }
+      const anchor = document.createElement('a')
+      anchor.href = href
+      anchor.download = `${episode.name}.mp3`
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      toast({
+        title: t('podcasts.audioSaved'),
+        description: `${episode.name}.mp3`,
+      })
+    } catch (error) {
+      console.error('Unable to download episode audio', error)
+      toast({ title: t('podcasts.audioUnavailable'), variant: 'destructive' })
+    } finally {
+      if (created) {
+        setTimeout(() => URL.revokeObjectURL(href), 10000)
+      }
+    }
+  }
+
   // Saves the spoken transcript as a plain-text file named after the episode.
   const handleDownloadTranscript = () => {
     const text = transcriptEntries
@@ -406,6 +440,11 @@ export function EpisodeCard({ episode, onDelete, deleting, onRetry, retrying }: 
                 </div>
               </DialogContent>
             </Dialog>
+            {audioSrc ? (
+              <Button variant="outline" size="sm" onClick={() => void handleDownloadAudio()}>
+                <Download className="mr-2 h-4 w-4" /> {t('podcasts.downloadAudio')}
+              </Button>
+            ) : null}
             {transcriptEntries.length > 0 ? (
               <Button variant="outline" size="sm" onClick={handleDownloadTranscript}>
                 <Download className="mr-2 h-4 w-4" /> {t('podcasts.transcriptTab')}

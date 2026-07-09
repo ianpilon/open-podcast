@@ -523,6 +523,8 @@ export const frFR = {
     modeBriefing: "Briefing",
     modeBriefingDesc: "Une voix lit et analyse vos notes",
     transcriptSaved: "Transcription enregistrée",
+    downloadAudio: "Audio",
+    audioSaved: "Audio enregistré",
     episodeName: "Nom de l'épisode",
     episodeNamePlaceholder: "ex: L'IA et le futur du travail",
     additionalInstructions: "Instructions supplémentaires",
