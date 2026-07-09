@@ -1,7 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AudioLines, ChevronsUpDown, Loader2, Play, Square } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { AudioLines, ChevronsUpDown, Loader2, Play, Square, Trash2, Upload } from 'lucide-react'
 
 import { KOKORO_VOICES, KokoroVoice, VoiceSampleKind, voiceById, voiceSampleUrl } from '@/lib/voices'
 import { useSpeakerProfiles, useUpdateSpeakerProfile } from '@/lib/hooks/use-podcasts'
@@ -66,6 +66,36 @@ function voiceTagLabel(voice: KokoroVoice, t: (key: string) => string) {
 
 type VoiceFilter = 'all' | 'female' | 'male' | 'US' | 'UK'
 
+// User-cloned voices served by the local voice gateway (F5-TTS). They have no
+// pre-rendered samples, so previews synthesize live via /api/voice-preview.
+interface CustomVoice {
+  id: string
+  name: string
+}
+
+const CUSTOM_PREVIEW_LINES: Record<VoiceSampleKind, string> = {
+  podcast: 'Welcome back to the show. Today we are getting into something I think you will want to hear.',
+  briefing: "I went through your notes. Here's what stands out, and what I think it means.",
+}
+
+function useCustomVoices() {
+  const [voices, setVoices] = useState<CustomVoice[]>([])
+  const refresh = useCallback(async () => {
+    try {
+      const response = await fetch('/api/voice-clone')
+      if (response.ok) {
+        setVoices(await response.json())
+      }
+    } catch {
+      // Gateway not running: the cloned-voices section simply stays hidden.
+    }
+  }, [])
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
+  return { voices, refresh }
+}
+
 interface VoiceGridProps {
   value?: string | null
   onSelect: (voiceId: string) => void
@@ -74,10 +104,86 @@ interface VoiceGridProps {
 
 export function VoiceGrid({ value, onSelect, sampleKind = 'podcast' }: VoiceGridProps) {
   const { t } = useTranslation()
+  const { toast } = useToast()
   const [filter, setFilter] = useState<VoiceFilter>('all')
   const [playingId, setPlayingId] = useState<string | null>(null)
+  const [loadingCustomId, setLoadingCustomId] = useState<string | null>(null)
+  const [cloneName, setCloneName] = useState('')
+  const [cloning, setCloning] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const { voices: customVoicesAll, refresh: refreshCustomVoices } = useCustomVoices()
+  // A cloned voice can also ship in the static list (e.g. "ian"); dedupe.
+  const customVoices = useMemo(
+    () => customVoicesAll.filter((voice) => !voiceById(voice.id)),
+    [customVoicesAll]
+  )
 
   useEffect(() => stopVoicePlayback, [])
+
+  const playCustomSample = useCallback(async (voiceId: string) => {
+    if (playingId === voiceId) {
+      stopVoicePlayback()
+      setPlayingId(null)
+      return
+    }
+    if (loadingCustomId) return
+    setLoadingCustomId(voiceId)
+    try {
+      const response = await fetch('/api/voice-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voice: voiceId, text: CUSTOM_PREVIEW_LINES[sampleKind] }),
+      })
+      if (!response.ok) throw new Error(`TTS returned ${response.status}`)
+      const url = URL.createObjectURL(await response.blob())
+      setPlayingId(voiceId)
+      playExclusive(url, () => {
+        URL.revokeObjectURL(url)
+        setPlayingId((current) => (current === voiceId ? null : current))
+      })
+    } catch (error) {
+      console.error('Cloned voice preview failed', error)
+      toast({ title: t('podcasts.voicePreviewFailed'), variant: 'destructive' })
+    } finally {
+      setLoadingCustomId(null)
+    }
+  }, [playingId, loadingCustomId, sampleKind, toast, t])
+
+  const deleteCustomVoice = useCallback(async (voiceId: string) => {
+    try {
+      await fetch(`/api/voice-clone?id=${voiceId}`, { method: 'DELETE' })
+      await refreshCustomVoices()
+    } catch (error) {
+      console.error('Failed to delete cloned voice', error)
+    }
+  }, [refreshCustomVoices])
+
+  const handleCloneFile = useCallback(async (file: File) => {
+    setCloning(true)
+    try {
+      const form = new FormData()
+      form.append('name', cloneName.trim())
+      form.append('file', file)
+      const response = await fetch('/api/voice-clone', { method: 'POST', body: form })
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(body.error || `upload failed with ${response.status}`)
+      }
+      setCloneName('')
+      await refreshCustomVoices()
+      onSelect(body.id)
+    } catch (error) {
+      console.error('Voice cloning failed', error)
+      toast({
+        title: t('podcasts.voiceCloneFailed'),
+        description: error instanceof Error ? error.message : undefined,
+        variant: 'destructive',
+      })
+    } finally {
+      setCloning(false)
+    }
+  }, [cloneName, onSelect, refreshCustomVoices, toast, t])
 
   const voices = useMemo(() => {
     switch (filter) {
@@ -114,6 +220,73 @@ export function VoiceGrid({ value, onSelect, sampleKind = 'podcast' }: VoiceGrid
 
   return (
     <div className="space-y-3">
+      {customVoices.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {t('podcasts.voiceYourVoices')}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {customVoices.map((voice) => {
+              const selected = value === voice.id
+              const playing = playingId === voice.id
+              return (
+                <div
+                  key={voice.id}
+                  role="radio"
+                  aria-checked={selected}
+                  tabIndex={0}
+                  onClick={() => onSelect(voice.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      onSelect(voice.id)
+                    }
+                  }}
+                  className={cn(
+                    'flex cursor-pointer items-center gap-2 rounded-lg border p-2 transition-colors',
+                    selected ? 'border-primary ring-1 ring-primary' : 'hover:bg-muted/60'
+                  )}
+                >
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      void playCustomSample(voice.id)
+                    }}
+                    aria-label={playing ? t('podcasts.voiceStopSample') : `${t('podcasts.voicePlaySample')}: ${voice.name}`}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-background hover:bg-accent"
+                  >
+                    {loadingCustomId === voice.id
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : playing
+                        ? <Square className="h-3 w-3 fill-current" />
+                        : <Play className="ml-0.5 h-3.5 w-3.5" />}
+                  </button>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <p className="truncate text-sm font-medium">{voice.name}</p>
+                      {playing && <Equalizer />}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{t('podcasts.voiceCloned')}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      void deleteCustomVoice(voice.id)
+                    }}
+                    aria-label={`${t('podcasts.delete')}: ${voice.name}`}
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-1.5">
         {filters.map((f) => (
           <button
@@ -178,6 +351,46 @@ export function VoiceGrid({ value, onSelect, sampleKind = 'podcast' }: VoiceGrid
           })}
         </div>
       </ScrollArea>
+
+      <div className="space-y-1.5 border-t pt-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {t('podcasts.voiceCloneTitle')}
+        </p>
+        <div className="flex items-center gap-2">
+          <Input
+            value={cloneName}
+            onChange={(e) => setCloneName(e.target.value)}
+            placeholder={t('podcasts.voiceCloneNamePlaceholder')}
+            className="h-8 text-xs"
+            disabled={cloning}
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              e.target.value = ''
+              if (file) void handleCloneFile(file)
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 shrink-0 text-xs"
+            disabled={cloning || !cloneName.trim()}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {cloning
+              ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+              : <Upload className="mr-1 h-3.5 w-3.5" />}
+            {cloning ? t('podcasts.voiceCloneBusy') : t('podcasts.voiceCloneUpload')}
+          </Button>
+        </div>
+        <p className="text-[11px] text-muted-foreground">{t('podcasts.voiceCloneHint')}</p>
+      </div>
     </div>
   )
 }

@@ -327,13 +327,13 @@ export function useUpdateSpeakerProfile() {
       profileId: string
       payload: SpeakerProfileInput
     }) => podcastsApi.updateSpeakerProfile(profileId, payload),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.speakerProfiles })
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.episodeProfiles })
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.podcastEpisodes })
       toast({
         title: t('podcasts.speakerUpdated'),
-        description: t('podcasts.speakerUpdatedDesc'),
+        description: t('podcasts.speakerUpdatedDesc').replace('{name}', variables.payload.name),
       })
     },
     onError: (error: unknown) => {
