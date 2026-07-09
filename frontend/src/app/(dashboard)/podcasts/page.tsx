@@ -18,8 +18,12 @@ export default function PodcastsPage() {
   const { episodeProfiles } = useEpisodeProfiles()
   const { speakerProfiles } = useSpeakerProfiles(episodeProfiles)
 
-  const hasUnconfiguredProfiles = useMemo(() => {
-    return episodeProfiles.some(needsModelSetup) || speakerProfiles.some(needsModelSetup)
+  // Name the offending profiles: a banner that fires without saying which
+  // profile is broken reads as noise and gets ignored.
+  const unconfiguredProfiles = useMemo(() => {
+    return [...episodeProfiles, ...speakerProfiles]
+      .filter(needsModelSetup)
+      .map((profile) => profile.name)
   }, [episodeProfiles, speakerProfiles])
 
   return (
@@ -33,12 +37,12 @@ export default function PodcastsPage() {
             </p>
           </header>
 
-          {hasUnconfiguredProfiles ? (
+          {unconfiguredProfiles.length > 0 ? (
             <Alert className="bg-amber-50 text-amber-900 border-amber-200">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>{t('podcasts.setupRequired')}</AlertTitle>
               <AlertDescription>
-                {t('podcasts.setupRequiredDesc')}
+                {t('podcasts.setupRequiredDesc')} ({unconfiguredProfiles.join(', ')})
               </AlertDescription>
             </Alert>
           ) : null}
