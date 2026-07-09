@@ -526,7 +526,6 @@ export const deDE = {
     modeBriefing: "Briefing",
     modeBriefingDesc: "Eine Stimme liest und analysiert deine Notizen",
     transcriptSaved: "Transkript gespeichert",
-    transcriptSavedDesc: "Sieh in deinem Downloads-Ordner nach.",
     episodeName: "Episodenname",
     episodeNamePlaceholder: "z. B. KI und die Zukunft der Arbeit",
     additionalInstructions: "Zusätzliche Anweisungen",

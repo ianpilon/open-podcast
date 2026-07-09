@@ -523,7 +523,6 @@ export const ptBR = {
     modeBriefing: "Briefing",
     modeBriefingDesc: "Uma voz lê e analisa suas anotações",
     transcriptSaved: "Transcrição salva",
-    transcriptSavedDesc: "Confira sua pasta Downloads.",
     episodeName: "Nome do episódio",
     episodeNamePlaceholder: "ex., IA e o Futuro do Trabalho",
     additionalInstructions: "Instruções adicionais",

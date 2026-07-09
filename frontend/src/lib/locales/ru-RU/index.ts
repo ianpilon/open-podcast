@@ -523,7 +523,6 @@ export const ruRU = {
     modeBriefing: "Брифинг",
     modeBriefingDesc: "Один голос читает и анализирует ваши заметки",
     transcriptSaved: "Стенограмма сохранена",
-    transcriptSavedDesc: "Проверьте папку «Загрузки».",
     episodeName: "Название эпизода",
     episodeNamePlaceholder: "напр., ИИ и будущее работы",
     additionalInstructions: "Дополнительные инструкции",

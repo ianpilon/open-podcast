@@ -523,7 +523,6 @@ export const zhCN = {
     modeBriefing: "简报",
     modeBriefingDesc: "一个声音朗读并分析你的笔记",
     transcriptSaved: "文字稿已保存",
-    transcriptSavedDesc: "请查看下载文件夹。",
     episodeName: "单集名称",
     episodeNamePlaceholder: "例如：AI 与工作的未来",
     additionalInstructions: "附加指令",

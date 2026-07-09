@@ -242,9 +242,11 @@ export function EpisodeCard({ episode, onDelete, deleting, onRetry, retrying }: 
     anchor.remove()
     setTimeout(() => URL.revokeObjectURL(url), 10000)
     // The Mac app saves silently (no browser download shelf), so confirm it.
+    // Where the file lands is decided by the shell/browser, so name the file
+    // rather than guessing at the folder.
     toast({
       title: t('podcasts.transcriptSaved'),
-      description: t('podcasts.transcriptSavedDesc'),
+      description: `${episode.name}.txt`,
     })
   }
 

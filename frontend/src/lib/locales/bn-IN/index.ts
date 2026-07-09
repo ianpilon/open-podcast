@@ -523,7 +523,6 @@ export const bnIN = {
     modeBriefing: "ব্রিফিং",
     modeBriefingDesc: "একটি কণ্ঠ আপনার নোট পড়ে ও বিশ্লেষণ করে",
     transcriptSaved: "প্রতিলিপি সংরক্ষিত হয়েছে",
-    transcriptSavedDesc: "আপনার ডাউনলোড ফোল্ডার দেখুন।",
     episodeName: "এপিসোডের নাম",
     episodeNamePlaceholder: "যেমন, AI এবং কাজের ভবিষ্যৎ",
     additionalInstructions: "অতিরিক্ত নির্দেশনা",
