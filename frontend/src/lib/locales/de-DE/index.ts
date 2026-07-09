@@ -525,6 +525,8 @@ export const deDE = {
     modePodcastDesc: "Moderatoren besprechen deine Inhalte als Episode",
     modeBriefing: "Briefing",
     modeBriefingDesc: "Eine Stimme liest und analysiert deine Notizen",
+    transcriptSaved: "Transkript gespeichert",
+    transcriptSavedDesc: "Sieh in deinem Downloads-Ordner nach.",
     episodeName: "Episodenname",
     episodeNamePlaceholder: "z. B. KI und die Zukunft der Arbeit",
     additionalInstructions: "Zusätzliche Anweisungen",

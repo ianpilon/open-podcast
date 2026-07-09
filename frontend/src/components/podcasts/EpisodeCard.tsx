@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useToast } from '@/lib/hooks/use-toast'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import type { TFunction } from 'i18next'
 
@@ -140,6 +141,7 @@ function extractTranscriptEntries(transcript: unknown): TranscriptEntry[] {
 
 export function EpisodeCard({ episode, onDelete, deleting, onRetry, retrying }: EpisodeCardProps) {
   const { t, language } = useTranslation()
+  const { toast } = useToast()
   const [audioSrc, setAudioSrc] = useState<string | undefined>()
   const [audioError, setAudioError] = useState<string | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
@@ -239,6 +241,11 @@ export function EpisodeCard({ episode, onDelete, deleting, onRetry, retrying }: 
     anchor.click()
     anchor.remove()
     setTimeout(() => URL.revokeObjectURL(url), 10000)
+    // The Mac app saves silently (no browser download shelf), so confirm it.
+    toast({
+      title: t('podcasts.transcriptSaved'),
+      description: t('podcasts.transcriptSavedDesc'),
+    })
   }
 
   const isFailed = FAILED_EPISODE_STATUSES.includes(episode.job_status as EpisodeStatus)

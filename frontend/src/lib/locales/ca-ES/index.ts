@@ -522,6 +522,8 @@ export const caES = {
     modePodcastDesc: "Els presentadors comenten el teu contingut en un episodi",
     modeBriefing: "Informe",
     modeBriefingDesc: "Una veu llegeix i analitza les teves notes",
+    transcriptSaved: "Transcripció desada",
+    transcriptSavedDesc: "Consulta la carpeta de Baixades.",
     episodeName: "Nom de l'episodi",
     episodeNamePlaceholder: "per exemple, La IA i el futur del treball",
     additionalInstructions: "Instruccions addicionals",

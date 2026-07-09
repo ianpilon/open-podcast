@@ -522,6 +522,8 @@ export const ruRU = {
     modePodcastDesc: "Ведущие обсуждают ваш контент в выпуске",
     modeBriefing: "Брифинг",
     modeBriefingDesc: "Один голос читает и анализирует ваши заметки",
+    transcriptSaved: "Стенограмма сохранена",
+    transcriptSavedDesc: "Проверьте папку «Загрузки».",
     episodeName: "Название эпизода",
     episodeNamePlaceholder: "напр., ИИ и будущее работы",
     additionalInstructions: "Дополнительные инструкции",

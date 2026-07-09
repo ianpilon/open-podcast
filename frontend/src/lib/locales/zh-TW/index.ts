@@ -522,6 +522,8 @@ export const zhTW = {
     modePodcastDesc: "主持人圍繞你的內容展開討論",
     modeBriefing: "簡報",
     modeBriefingDesc: "一個聲音朗讀並分析你的筆記",
+    transcriptSaved: "文字稿已儲存",
+    transcriptSavedDesc: "請查看下載資料夾。",
     episodeName: "單集名稱",
     episodeNamePlaceholder: "例如：AI 與工作的未來",
     additionalInstructions: "附加指令",

@@ -522,6 +522,8 @@ export const enUS = {
     modePodcastDesc: "Hosts discuss your content as an episode",
     modeBriefing: "Briefing",
     modeBriefingDesc: "One voice reads and analyzes your notes",
+    transcriptSaved: "Transcript saved",
+    transcriptSavedDesc: "Check your Downloads folder.",
     episodeName: "Episode name",
     episodeNamePlaceholder: "e.g., AI and the Future of Work",
     additionalInstructions: "Additional instructions",

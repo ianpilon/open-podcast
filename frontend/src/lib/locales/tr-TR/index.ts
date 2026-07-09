@@ -522,6 +522,8 @@ export const trTR = {
     modePodcastDesc: "Sunucular içeriğini bir bölümde tartışır",
     modeBriefing: "Brifing",
     modeBriefingDesc: "Tek bir ses notlarını okur ve analiz eder",
+    transcriptSaved: "Transkript kaydedildi",
+    transcriptSavedDesc: "İndirilenler klasörünü kontrol et.",
     episodeName: "Bölüm adı",
     episodeNamePlaceholder: "örn. Yapay Zeka ve İşin Geleceği",
     additionalInstructions: "Ek talimatlar",

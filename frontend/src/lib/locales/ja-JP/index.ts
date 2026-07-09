@@ -522,6 +522,8 @@ export const jaJP = {
     modePodcastDesc: "ホストがコンテンツをエピソードとして語り合います",
     modeBriefing: "ブリーフィング",
     modeBriefingDesc: "1つの音声がノートを読み上げて分析します",
+    transcriptSaved: "文字起こしを保存しました",
+    transcriptSavedDesc: "ダウンロードフォルダを確認してください。",
     episodeName: "エピソード名",
     episodeNamePlaceholder: "例：AIと仕事の未来",
     additionalInstructions: "追加の指示",

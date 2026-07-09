@@ -522,6 +522,8 @@ export const frFR = {
     modePodcastDesc: "Des animateurs discutent de votre contenu dans un épisode",
     modeBriefing: "Briefing",
     modeBriefingDesc: "Une voix lit et analyse vos notes",
+    transcriptSaved: "Transcription enregistrée",
+    transcriptSavedDesc: "Consultez votre dossier Téléchargements.",
     episodeName: "Nom de l'épisode",
     episodeNamePlaceholder: "ex: L'IA et le futur du travail",
     additionalInstructions: "Instructions supplémentaires",
