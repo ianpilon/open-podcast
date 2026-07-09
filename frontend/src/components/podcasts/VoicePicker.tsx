@@ -599,12 +599,23 @@ export function VoiceStrip({ speakerProfileName, previewText, sampleKind = 'podc
 
   const changeVoice = useCallback(async (index: number, voiceId: string) => {
     if (!profile) return
+    // Picking a voice adopts its name as the speaker's display name too —
+    // otherwise the row keeps the old character name over the new voice,
+    // which reads as a bug. The pencil can still rename afterwards.
+    const displayName =
+      voiceById(voiceId)?.name ??
+      customVoices.find((v) => v.id === voiceId)?.name ??
+      voiceId
     try {
-      await saveSpeakers(profile.speakers.map((s, i) => (i === index ? { ...s, voice_id: voiceId } : s)))
+      await saveSpeakers(
+        profile.speakers.map((s, i) =>
+          i === index ? { ...s, voice_id: voiceId, name: displayName } : s
+        )
+      )
     } catch (error) {
       console.error('Failed to update speaker voice', error)
     }
-  }, [profile, saveSpeakers])
+  }, [profile, customVoices, saveSpeakers])
 
   // The top line of each row is the speaker CHARACTER (it shapes the script
   // and transcript attribution), independent of which voice reads it. Let the
