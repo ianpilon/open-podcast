@@ -47,9 +47,16 @@ Edit that one file to change how every voice sounds. Per-speaker character (a sk
 - With a document loaded, **Read my content** previews a voice reading your actual opening lines through the local TTS engine.
 - A full **Voice Library** page lives under Speaker configurations for browsing and copying voice IDs.
 
+## Clone your own voice
+
+The picker's **Clone a new voice** section turns a short recording into a selectable voice: name it, upload 10–20 seconds of clear speech (wav, mp3, or m4a), and about twenty seconds later it appears under **Your voices** — auto-selected, with a live synthesized preview and a delete button. Any speaker in any format can then use it, so a Meeting Recap can literally be your own notes read back in your own voice.
+
+Cloning runs entirely on-device through a local voice gateway: the recording is normalized, transcribed with a local Whisper model, and served as an [F5-TTS](https://github.com/SWivid/F5-TTS) zero-shot voice. The gateway speaks the same OpenAI-compatible TTS protocol as Kokoro and proxies every built-in voice id through to it, so the app only ever talks to one TTS endpoint. Fair warning: cloned voices synthesize slower than Kokoro (roughly 4x realtime on Apple Silicon versus Kokoro's near-instant), so long episodes take noticeably longer to render.
+
 ## After generation
 
-- Completed episodes have an inline audio player, a **Details** dialog (summary, outline, and the full spoken transcript), and a **Transcript** button that downloads the exact text being read as a `.txt` file named after the episode.
+- When the episode you're waiting on finishes rendering, the app switches itself to **Completed Episodes** — polling continues even while the window is unfocused, so it's already on the right page when you come back.
+- Completed episodes have an inline audio player, a **Details** dialog (summary, outline, and the full spoken transcript), and **Audio** / **Transcript** buttons that download the mp3 and the exact text being read, both named after the episode.
 - The Currently Processing panel sits next to the generate form while an episode renders.
 - If a generation job dies, the app watches the job after submission and surfaces the real backend error as a toast instead of failing silently.
 
@@ -64,14 +71,15 @@ Open Notebook is a broad, privacy-focused research assistant (notebooks, sources
 - **Auto-filled episode name** taken from the uploaded file.
 - **Smart model routing:** small documents use a fast local model; large ones automatically switch to a more capable model, with a heads-up that it may take a little longer.
 - **Mode-aware condensing:** oversized documents are summarized for podcasts and reduced to verified verbatim excerpts for briefings.
-- **Voice previews everywhere** and per-episode transcript download.
+- **Voice previews everywhere**, on-device voice cloning, and per-episode audio and transcript downloads.
 
 ## How it works
 
 Everything runs locally, no data leaves your machine:
 
 - **Text** (outline + script): [Ollama](https://ollama.com) — `qwen2.5` for small documents, `qwen2.5:14b` for large ones
-- **Voices** (text-to-speech): [Kokoro](https://github.com/remsky/Kokoro-FastAPI)
+- **Voices** (text-to-speech): [Kokoro](https://github.com/remsky/Kokoro-FastAPI), fronted by a local voice gateway that also serves cloned voices via [F5-TTS](https://github.com/SWivid/F5-TTS)
+- **Voice cloning transcription:** local Whisper (mlx-whisper)
 - **API:** FastAPI (port 5055)
 - **Database:** SurrealDB
 - **UI:** Next.js (this fork's frontend lives in `frontend/`)
