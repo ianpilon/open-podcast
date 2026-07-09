@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { ClipboardList, Loader2, Mic } from 'lucide-react'
 
 import { useNotebooks } from '@/lib/hooks/use-notebooks'
 import { useEpisodeProfiles, useGeneratePodcast } from '@/lib/hooks/use-podcasts'
@@ -12,6 +12,7 @@ import { chatApi } from '@/lib/api/chat'
 import { BuildContextRequest } from '@/lib/types/api'
 import { PodcastGenerationRequest } from '@/lib/types/podcasts'
 import { condenseContent, needsCondensing } from '@/lib/condense-content'
+import { extractVerbatimContent } from '@/lib/extract-content'
 import { useToast } from '@/lib/hooks/use-toast'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import {
@@ -22,11 +23,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { usePodcastContentStore } from '@/lib/stores/podcast-content-store'
+import { VoiceStrip } from '@/components/podcasts/VoicePicker'
+import { PodcastMode, formatProfileLabel, profileMode } from '@/lib/podcast-modes'
 
 interface GeneratePodcastDialogProps {
   open: boolean
@@ -52,6 +54,7 @@ const LARGE_FILE_CHARS = 24000
 export function GeneratePodcastForm({ active = true, onGenerated, onCancel, showCancel = false }: GeneratePodcastFormProps) {
   const { t } = useTranslation()
   const { toast } = useToast()
+  const [mode, setMode] = useState<PodcastMode>('podcast')
   const [episodeProfileId, setEpisodeProfileId] = useState<string>('')
   const [episodeName, setEpisodeName] = useState('')
   const [nameEdited, setNameEdited] = useState(false)
@@ -83,6 +86,7 @@ export function GeneratePodcastForm({ active = true, onGenerated, onCancel, show
   )
 
   const resetState = useCallback(() => {
+    setMode('podcast')
     setEpisodeProfileId('')
     setEpisodeName('')
     setNameEdited(false)
@@ -108,12 +112,36 @@ export function GeneratePodcastForm({ active = true, onGenerated, onCancel, show
     }
   }, [uploadedFiles, nameEdited])
 
+  const visibleProfiles = useMemo(
+    () => episodeProfiles.filter((profile) => profileMode(profile.name) === mode),
+    [episodeProfiles, mode]
+  )
+
+  // Keep the selected format valid for the current mode; when a mode has a
+  // single format, select it so the user isn't asked a one-option question.
+  useEffect(() => {
+    if (episodeProfileId && !visibleProfiles.some((profile) => profile.id === episodeProfileId)) {
+      setEpisodeProfileId('')
+      return
+    }
+    if (!episodeProfileId && visibleProfiles.length === 1) {
+      setEpisodeProfileId(visibleProfiles[0].id)
+    }
+  }, [episodeProfileId, visibleProfiles])
+
   const selectedEpisodeProfile = useMemo(() => {
     if (!episodeProfileId) {
       return undefined
     }
     return episodeProfiles.find((profile) => profile.id === episodeProfileId)
   }, [episodeProfileId, episodeProfiles])
+
+  // First lines of the uploaded content, used by the voice strip so a voice
+  // can read the user's actual opening before they commit to generating.
+  const voicePreviewText = useMemo(() => {
+    const firstDone = uploadedFiles.find((file) => file.status === 'done' && file.text.trim())
+    return firstDone ? firstDone.text.trim().slice(0, 240) : ''
+  }, [uploadedFiles])
 
   const buildContentFromSelections = useCallback(async () => {
     const parts: string[] = []
@@ -195,15 +223,22 @@ export function GeneratePodcastForm({ active = true, onGenerated, onCancel, show
         }
 
         // Auto-condense content that's too large for the model's context window.
+        // Briefing analysts must quote verbatim, so their content is shrunk by
+        // SELECTING exact passages (verified against the source) instead of
+        // summarizing, which would destroy every quotable line.
         if (needsCondensing(content)) {
+          const useExtraction = mode === 'briefing'
+          const extractId = transformations?.find((tr) => tr.name === 'Verbatim Extract')?.id
           const summaryId = transformations?.find((tr) => tr.name === 'Simple Summary')?.id
+          const transformationId = useExtraction ? (extractId ?? summaryId) : summaryId
           // Summarization is robust on the fast model, so use it for the condense passes.
           const condenseModelId = fastModel?.id ?? chosenModelId
-          if (summaryId && condenseModelId) {
+          if (transformationId && condenseModelId) {
             try {
-              content = await condenseContent({
+              const shrink = useExtraction && extractId ? extractVerbatimContent : condenseContent
+              content = await shrink({
                 content,
-                transformationId: summaryId,
+                transformationId,
                 modelId: condenseModelId,
                 onStatus: setStatusText,
               })
@@ -284,6 +319,7 @@ export function GeneratePodcastForm({ active = true, onGenerated, onCancel, show
       episodeName,
       generatePodcast,
       instructions,
+      mode,
       onGenerated,
       resetState,
       selectedEpisodeProfile,
@@ -342,30 +378,73 @@ export function GeneratePodcastForm({ active = true, onGenerated, onCancel, show
         ) : (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="episode_profile">{t('podcasts.episodeProfile')}</Label>
-              <Select
-                value={episodeProfileId}
-                onValueChange={setEpisodeProfileId}
-                disabled={episodeProfiles.length === 0}
-              >
-                <SelectTrigger id="episode_profile">
-                  <SelectValue placeholder={t('podcasts.episodeProfilePlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {episodeProfiles.map((profile) => (
-                    <SelectItem key={profile.id} value={profile.id}>
-                      {profile.name}
-                    </SelectItem>
+              <Label>{t('podcasts.modeQuestion')}</Label>
+              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('podcasts.modeQuestion')}>
+                {(
+                  [
+                    { value: 'podcast', Icon: Mic, title: t('podcasts.modePodcast'), desc: t('podcasts.modePodcastDesc') },
+                    { value: 'briefing', Icon: ClipboardList, title: t('podcasts.modeBriefing'), desc: t('podcasts.modeBriefingDesc') },
+                  ] as const
+                ).map(({ value, Icon, title, desc }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={mode === value}
+                    onClick={() => setMode(value)}
+                    className={`rounded-lg border p-3 text-left transition-colors ${
+                      mode === value
+                        ? 'border-primary bg-primary/5'
+                        : 'border-input hover:bg-muted/50'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <Icon className="h-4 w-4" /> {title}
+                    </span>
+                    <span className="mt-1 block text-xs text-muted-foreground">{desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('podcasts.episodeProfile')}</Label>
+              {visibleProfiles.length === 0 ? (
+                <div className="rounded-lg border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
+                  {t('podcasts.noProfilesFound')}
+                </div>
+              ) : (
+                <div className="space-y-2" role="radiogroup" aria-label={t('podcasts.episodeProfile')}>
+                  {visibleProfiles.map((profile) => (
+                    <button
+                      key={profile.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={episodeProfileId === profile.id}
+                      onClick={() => setEpisodeProfileId(profile.id)}
+                      className={`w-full rounded-lg border p-3 text-left transition-colors ${
+                        episodeProfileId === profile.id
+                          ? 'border-primary bg-primary/5'
+                          : 'border-input hover:bg-muted/50'
+                      }`}
+                    >
+                      <span className="block text-sm font-medium">{formatProfileLabel(profile.name)}</span>
+                      {profile.description && (
+                        <span className="mt-1 block text-xs text-muted-foreground">{profile.description}</span>
+                      )}
+                    </button>
                   ))}
-                </SelectContent>
-              </Select>
-              {selectedEpisodeProfile && (
-                <p className="text-xs text-muted-foreground">
-                  {t('podcasts.usesSpeakerProfile')}{' '}
-                  <strong>{selectedEpisodeProfile.speaker_config}</strong>
-                </p>
+                </div>
               )}
             </div>
+
+            {selectedEpisodeProfile && (
+              <VoiceStrip
+                speakerProfileName={selectedEpisodeProfile.speaker_config}
+                previewText={voicePreviewText}
+                sampleKind={mode}
+              />
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="episode_name">{t('podcasts.episodeName')}</Label>
