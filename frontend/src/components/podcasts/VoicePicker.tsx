@@ -1,9 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AudioLines, ChevronsUpDown, Loader2, Play, Square, Trash2, Upload } from 'lucide-react'
+import { AudioLines, Check, ChevronsUpDown, Loader2, Pencil, Play, Square, Trash2, Upload, X } from 'lucide-react'
 
 import { KOKORO_VOICES, KokoroVoice, VoiceSampleKind, voiceById, voiceSampleUrl } from '@/lib/voices'
+import type { SpeakerProfile } from '@/lib/types/podcasts'
 import { useSpeakerProfiles, useUpdateSpeakerProfile } from '@/lib/hooks/use-podcasts'
 import { useToast } from '@/lib/hooks/use-toast'
 import { useTranslation } from '@/lib/hooks/use-translation'
@@ -581,25 +582,47 @@ export function VoiceStrip({ speakerProfileName, previewText, sampleKind = 'podc
     }
   }, [previewText, loadingKey, toast, t])
 
+  const saveSpeakers = useCallback(async (speakers: SpeakerProfile['speakers']) => {
+    if (!profile) return
+    await updateProfile.mutateAsync({
+      profileId: profile.id,
+      payload: {
+        name: profile.name,
+        description: profile.description ?? '',
+        voice_model: profile.voice_model ?? null,
+        tts_provider: profile.tts_provider ?? null,
+        tts_model: profile.tts_model ?? null,
+        speakers,
+      },
+    })
+  }, [profile, updateProfile])
+
   const changeVoice = useCallback(async (index: number, voiceId: string) => {
     if (!profile) return
-    const speakers = profile.speakers.map((s, i) => (i === index ? { ...s, voice_id: voiceId } : s))
     try {
-      await updateProfile.mutateAsync({
-        profileId: profile.id,
-        payload: {
-          name: profile.name,
-          description: profile.description ?? '',
-          voice_model: profile.voice_model ?? null,
-          tts_provider: profile.tts_provider ?? null,
-          tts_model: profile.tts_model ?? null,
-          speakers,
-        },
-      })
+      await saveSpeakers(profile.speakers.map((s, i) => (i === index ? { ...s, voice_id: voiceId } : s)))
     } catch (error) {
       console.error('Failed to update speaker voice', error)
     }
-  }, [profile, updateProfile])
+  }, [profile, saveSpeakers])
+
+  // The top line of each row is the speaker CHARACTER (it shapes the script
+  // and transcript attribution), independent of which voice reads it. Let the
+  // user rename the character in place instead of hunting through settings.
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [nameDraft, setNameDraft] = useState('')
+
+  const saveSpeakerName = useCallback(async () => {
+    if (!profile || editingIndex === null || !nameDraft.trim()) return
+    try {
+      await saveSpeakers(
+        profile.speakers.map((s, i) => (i === editingIndex ? { ...s, name: nameDraft.trim() } : s))
+      )
+      setEditingIndex(null)
+    } catch (error) {
+      console.error('Failed to rename speaker', error)
+    }
+  }, [profile, editingIndex, nameDraft, saveSpeakers])
 
   if (!profile || profile.speakers.length === 0) {
     return null
@@ -635,10 +658,55 @@ export function VoiceStrip({ speakerProfileName, previewText, sampleKind = 'podc
                 {initials || '?'}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <p className="truncate text-sm font-medium">{speaker.name}</p>
-                  {playingKey === sampleKey || playingKey === contentKey ? <Equalizer /> : null}
-                </div>
+                {editingIndex === index ? (
+                  <div className="flex items-center gap-1">
+                    <Input
+                      value={nameDraft}
+                      onChange={(e) => setNameDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          void saveSpeakerName()
+                        }
+                        if (e.key === 'Escape') setEditingIndex(null)
+                      }}
+                      autoFocus
+                      className="h-7 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void saveSpeakerName()}
+                      aria-label={t('common.save')}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded border bg-background hover:text-primary"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingIndex(null)}
+                      aria-label={t('common.cancel')}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded border bg-background hover:text-destructive"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="group flex items-center gap-1.5">
+                    <p className="truncate text-sm font-medium">{speaker.name}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingIndex(index)
+                        setNameDraft(speaker.name)
+                      }}
+                      aria-label={`${t('common.edit')}: ${speaker.name}`}
+                      className="text-muted-foreground/50 hover:text-foreground"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                    {playingKey === sampleKey || playingKey === contentKey ? <Equalizer /> : null}
+                  </div>
+                )}
                 <p className="truncate text-xs text-muted-foreground">
                   {voice
                     ? `${voice.name} — ${voiceTagLabel(voice, t)}`
